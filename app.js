@@ -1,31 +1,34 @@
-const express = require('express');
-const mongoose = require('mongoose');
+const dotenv = require("dotenv");
+dotenv.config();
 
-mongoose.connect('mongodb+srv://saaraahdahmani:<Fvz_86dzuRPdXF7>@cluster0.wplqs.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0',
-  { useNewUrlParser: true,
-    useUnifiedTopology: true })
-  .then(() => console.log('Connexion à MongoDB réussie !'))
-  .catch(() => console.log('Connexion à MongoDB échouée !'));
+//fonction d'importation d'express
+const express = require("express");
+const cors = require('cors');
 
-  const app = express();
+const mongoose = require("mongoose");
 
-app.use((req, res, next) => {
-  console.log('Requête reçue !');
-  next();
-});
+//constante app qui va appeler la méthode express
+const app = express();
 
-app.use((req, res, next) => {
-  res.status(201);
-  next();
-});
+app.use(express.json());
+app.use('/images', express.static('images'));
 
-app.use((req, res, next) => {
-  res.json({ message: 'Votre requête a bien été reçue !' });
-  next();
-});
+const booksRoutes = require("../backend/routes/books");
+const usersRoutes = require("./routes/users");
+const User = require("./models/Users");
+const Book = require("./models/Books");
 
-app.use((req, res, next) => {
-  console.log('Réponse envoyée avec succès !');
-});
+mongoose
+  .connect("mongodb+srv://saaraahdahmani:Fvz_86dzuRPdXF7@cluster0.wplqs.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0",
+    { useNewUrlParser: true, useUnifiedTopology: true }
+  )
+  .then(() => console.log("Connexion à MongoDB réussie !"))
+  .catch(() => console.log("Connexion à MongoDB échouée :/ !"));
 
+app.use(cors())
+
+app.use('/api/books', booksRoutes);
+app.use('/api/auth', usersRoutes);
+
+//exporter l'app pour pouvoir utiliser sur les autres fichiers
 module.exports = app;
