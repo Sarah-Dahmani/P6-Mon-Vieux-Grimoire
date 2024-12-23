@@ -1,34 +1,34 @@
-const multer = require('multer'); //package pour la gestion des fichiers entrants
+// Importation des modules nécessaires
+const multer = require('multer'); // Multer est un middleware pour gérer les téléchargements de fichiers
+const sharp = require('sharp');   // Sharp est un module pour la manipulation d'images (bien qu'il ne soit pas utilisé dans ce code, il pourrait être utilisé pour le redimensionnement ou la conversion d'images)
 
-const MIME_TYPES ={
-'image/jpg': 'jpg',
-'image/jpeg': 'jpg',
-'image/png': 'png',
-'image/webp' : 'webp'
+// Définition des types MIME autorisés et leurs extensions correspondantes
+const MIMES_TYPES = {
+    'image/jpg': 'jpg', // Type MIME pour l'image JPG
+    'image/jpeg': 'jpg', // Type MIME pour l'image JPEG
+    'image/png': 'png'   // Type MIME pour l'image PNG
 }
 
-//objet de configuration de multer
-//diskStorage : enregistrement sur le disque
-//besoin de 2 éléments
-//destination : dans quel dossier enregistrer les fichiers > 3 arguments (null = pas d'erreur/ images = nom du dossier)
-//filename pour transformer les noms de fichiers et éviter les erreurs dans la base de données
-//const extension pour générer un mimetype
-//callback pour créer le filename en entier > name créé plus tôt + timestamp + '.' + extension du fichier
+// Configuration de l'emplacement et du nom du fichier pour le stockage des images
 const storage = multer.diskStorage({
+    // Spécifie le répertoire de destination pour les fichiers téléchargés
     destination: (req, file, callback) => {
-        callback(null, 'tmp')
+        callback(null, 'backend/images/'); // L'image sera enregistrée dans le dossier 'backend/images/'
     },
-    filename: (req, file, callback) => {
-        const extension = MIME_TYPES[file.mimetype];
-        let name = Buffer.from(file.originalname, 'latin1').toString('utf8').split(' ').join('_').toLowerCase();
-        name = name.replace("." + extension, '');
-        callback(null, name + Date.now() + '.' + extension)
 
+    // Spécifie le nom du fichier à enregistrer
+    filename: (req, file, callback) => {
+        // On transforme le nom du fichier pour remplacer les espaces par des underscores et on enlève l'extension
+        const name = (file.originalname.split(' ').join("_")).split('.')[0]; 
+        
+        // On obtient l'extension correspondant au type MIME du fichier
+        const ext = MIMES_TYPES[file.mimetype]; 
+        
+        // On crée le nom final du fichier (nom + extension) et on le passe au callback
+        callback(null, name + '.' + ext); // Exemple : "image_file.jpg"
     }
 });
 
-//appel de multer dans lequel on passe l'objet storage
-//méthode .single car c'est un fichier unique
-//fichier image uniquement
-
-module.exports = multer({storage}).single('image');
+// Export du middleware Multer configuré
+module.exports = multer({ storage: storage }).single('image'); 
+// .single('image') spécifie que nous attendons un seul fichier avec le champ 'image' dans le formulaire
