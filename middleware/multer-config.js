@@ -1,34 +1,55 @@
-// Importation des modules nécessaires
-const multer = require('multer'); // Multer est un middleware pour gérer les téléchargements de fichiers
-const sharp = require('sharp');   // Sharp est un module pour la manipulation d'images (bien qu'il ne soit pas utilisé dans ce code, il pourrait être utilisé pour le redimensionnement ou la conversion d'images)
+const multer = require('multer');
+const sharp = require('sharp');
+const path = require('path');
+const fs = require('fs');
 
-// Définition des types MIME autorisés et leurs extensions correspondantes
-const MIMES_TYPES = {
-    'image/jpg': 'jpg', // Type MIME pour l'image JPG
-    'image/jpeg': 'jpg', // Type MIME pour l'image JPEG
-    'image/png': 'png'   // Type MIME pour l'image PNG
-}
+const MIME_TYPES = {
+  'image/jpg': 'jpg',
+  'image/jpeg': 'jpg',
+  'image/png': 'png'
+};
 
-// Configuration de l'emplacement et du nom du fichier pour le stockage des images
+// Configuration
 const storage = multer.diskStorage({
-    // Spécifie le répertoire de destination pour les fichiers téléchargés
-    destination: (req, file, callback) => {
-        callback(null, 'backend/images/'); // L'image sera enregistrée dans le dossier 'backend/images/'
-    },
+  // Enregistrement des fichiers dans le dossier images
+  destination: (req, file, callback) => {
+    callback(null, 'images');
+  },
 
-    // Spécifie le nom du fichier à enregistrer
-    filename: (req, file, callback) => {
-        // On transforme le nom du fichier pour remplacer les espaces par des underscores et on enlève l'extension
-        const name = (file.originalname.split(' ').join("_")).split('.')[0]; 
-        
-        // On obtient l'extension correspondant au type MIME du fichier
-        const ext = MIMES_TYPES[file.mimetype]; 
-        
-        // On crée le nom final du fichier (nom + extension) et on le passe au callback
-        callback(null, name + '.' + ext); // Exemple : "image_file.jpg"
-    }
+  // Nom des images => nom d'origine, remplacement des espaces et des points par des underscores, ajout d'un timestamp
+  filename: (req, file, callback) => {
+    const name = file.originalname.replace(/[\s.]+/g, '_');
+    const extension = MIME_TYPES[file.mimetype];
+    callback(null, name + Date.now() + '.' + extension);
+  }
 });
 
-// Export du middleware Multer configuré
-module.exports = multer({ storage: storage }).single('image'); 
-// .single('image') spécifie que nous attendons un seul fichier avec le champ 'image' dans le formulaire
+// Gestion des téléchargements de fichiers image uniquement
+module.exports = multer({storage: storage}).single('image');
+
+// Redimensionnement de l'image
+module.exports.resizeImage = (req, res, next) => {
+  // On vérifie si un fichier a été téléchargé
+  if (!req.file) {
+    return next();
+  }
+
+  const filePath = req.file.path;
+  const fileName = req.file.filename;
+  const outputFilePath = path.join('images', `resized_${fileName}`);
+
+  sharp(filePath)
+    .resize({ width: 206, height: 260 })
+    .toFile(outputFilePath)
+    .then(() => {
+      // Remplacer le fichier original par le fichier redimensionné
+      fs.unlink(filePath, () => {
+        req.file.path = outputFilePath;
+        next();
+      });
+    })
+    .catch(err => {
+      console.log(err);
+      return next();
+    });
+};
